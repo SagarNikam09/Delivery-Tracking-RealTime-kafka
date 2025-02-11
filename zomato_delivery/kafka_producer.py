@@ -27,7 +27,7 @@ def delivery_report(err, msg):
     else:
         print(f"Message delivered to {msg.topic()} [{msg.partition()}]")
 
-topic = "like_topic"
+topic = "location-updates"
 
 while True:
     # Calculate current position
