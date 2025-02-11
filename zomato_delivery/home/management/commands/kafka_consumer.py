@@ -11,27 +11,17 @@ from django.db import transaction
 class Command(BaseCommand):
     help = 'Run Kafka consumer to listen for location updates'
 
-    def process_batch(self,like_batch):
-        print(f"Batch processing Started! {like_batch}")
-        with transaction.atomic():
-            for post_id, like_count in like_batch.items():
-                post = Post.objects.select_for_update().get(id=post_id)
-                post.likes += like_count
-                print("Post count updated")
-                post.save()
-
-    def handle(self, *args, **options):
+    def handle(self, *args, **options)-> str | None:
         like_batch = defaultdict(int)
         print(like_batch)
         conf = {
-            'bootstrap.servers': os.getenv('KAFKA_BROKER_URL', 'localhost:9092'),
+            'bootstrap.servers': 'localhost:9092',
             'group.id': "location_group",
             'auto.offset.reset': 'earliest'
         }
 
         consumer = Consumer(conf)
-        #consumer.subscribe(['location_updates'])
-        consumer.subscribe(['like_topic'])
+        consumer.subscribe(['location_group'])
         print("KAFKA CONSUMER STARTED")
         total_messages = 0
         try:
@@ -41,19 +31,19 @@ class Command(BaseCommand):
                 if msg is None:
                     continue
                 if msg.error():
-                    print(msg.error())
-                    #break
-                    continue
+                    if msg.error().code() == KafkaException._PARTITION_EOF:
+                        continue
+                    else:
+                        print(msg.error())
+                        break
 
                 data = json.loads(msg.value().decode('utf-8'))
-                post_id = data['post_id']
-                like_batch[post_id] += 1
-                total_messages += 1
-                print(like_batch, len(like_batch),total_messages)
-                if total_messages >= 1000:  # For example, process every 1000 messages
-                    self.process_batch(like_batch)
-                    like_batch.clear()
-                    total_messages = 0
+                LocationUpdate.objects.create( 
+                    latitude=data['latitude'],
+                    longitude=data['longitude'],
+                    )
+                print(f"Message: {data}")
+
 
 
         except KeyboardInterrupt:
