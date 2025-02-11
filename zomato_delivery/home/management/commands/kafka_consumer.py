@@ -4,16 +4,11 @@ from confluent_kafka import Consumer, KafkaException
 import json
 from home.models import LocationUpdate
 import os
-from collections import defaultdict
-from home.models import Post
-from django.db import transaction
 
 class Command(BaseCommand):
     help = 'Run Kafka consumer to listen for location updates'
 
     def handle(self, *args, **options)-> str | None:
-        like_batch = defaultdict(int)
-        print(like_batch)
         conf = {
             'bootstrap.servers': 'localhost:9092',
             'group.id': "location_group",
@@ -31,7 +26,7 @@ class Command(BaseCommand):
                 if msg is None:
                     continue
                 if msg.error():
-                    if msg.error().code() == KafkaException._PARTITION_EOF:
+                    if msg.error().code() == KafkaException:
                         continue
                     else:
                         print(msg.error())

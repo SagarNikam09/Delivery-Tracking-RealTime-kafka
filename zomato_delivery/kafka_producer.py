@@ -40,6 +40,7 @@ while True:
         'longitude': longitude
     }
     
+    print(f"Sending location update: {data}")
     # Produce the message to Kafka
     producer.produce(topic, json.dumps(data).encode('utf-8'), callback=delivery_report)
     producer.flush()
